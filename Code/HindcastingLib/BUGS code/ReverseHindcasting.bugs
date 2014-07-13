@@ -1,0 +1,51 @@
+model {
+for(i in 1:N){
+
+ab.values[i]~dlnorm(log(mean.ab[i]),theta.ab)
+
+#mean.ab[i]<-log(intercept.ab+a.ab*est.time[i]+b.ab*(est.time[i]^2)+c.ab*(est.time[i]^3))
+mean.ab[i]<-dbeta(est.time[i]/scale,a.ab,b.ab)*scale
+
+
+
+na.values[i]~dlnorm(log(mean.na[i]),theta.na)
+#mean.na[i]<-log(intercept.na+a.na*est.time[i]+b.na*(est.time[i]^2)+c.na*(est.time[i]^3))
+mean.na[i]<-dbeta(est.time[i]/scale,a.na,b.na)*scale
+}
+
+for(i in 1:N){
+est.time[i]~dcat(btv.probs)
+}
+
+#Priors
+#intercept.ab~ dnorm(0, 1.0E-6 )
+#a.ab ~ dnorm( 0 , 1.0E-6 )
+#b.ab ~ dnorm( 0 , 1.0E-6 )
+#c.ab ~ dnorm( 0 , 1.0E-6 )
+#d.ab ~ dnorm( 0 , 1.0E-6 )
+a.ab~dgamma(0.1,0.1)
+b.ab~dgamma(0.1,0.1)
+
+
+#intercept.na ~ dnorm(0, 1.0E-6 )
+#a.na ~ dnorm( 0 , 1.0E-6 )
+#b.na ~ dnorm( 0 , 1.0E-6 )
+#c.na ~ dnorm( 0 , 1.0E-6 )
+#d.na ~ dnorm( 0 , 1.0E-6 )
+a.na~dgamma(0.1,0.1)
+b.na~dgamma(0.1,0.1)
+
+scale~dunif(0,400)
+
+theta.ab ~ dunif(0.4,40)#dgamma( 0.01 , 0.01 )
+theta.na ~dunif(0.4,40)#dgamma( 0.01 , 0.01 )
+}
+
+##Estimate it using linear regression to start with. Do that with the curve above as well! 
+###Take the likely distribution of time since infection into account. Bugs code should be simple
+#AB~rlnorm(mean.AB,theta)
+#mean.ab=AB.FUN.est(estimated.infection.time)
+#NA~rlnorm(NA.FUN.est(estimated.infection.time),theta)
+#mean.na=NA.FUN.est(estimated.infection.time)
+#estimated.infection.time~multinomial(btv.epidemic)
+### AND priors...
