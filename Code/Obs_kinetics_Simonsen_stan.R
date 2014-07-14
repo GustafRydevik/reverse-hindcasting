@@ -24,20 +24,24 @@ source(file.path(script.path,"MH files/metropolisHastingsAdaptiveV3.R"))
 
 
 ###Generating some data
-ig.values.simonsen<-dget(file=file.path(data.path,"simonesn_ig_array.txt"))
-obs.array.simonsen<-dget(file=file.path(data.path,"simonsen_obstime_array.txt"))
+simonsen.long<-dget(file=file.path(data.path,"simonsen_long.txt"))
+simonsen.long<-simonsen.long[!is.nan(simonsen.long$IGG),]
+
+simonsen.long$ID.seq<-as.numeric(factor(simonsen.long$ID))
+simonsen.long<-simonsen.long[simonsen.long$Time>0,]
 n.igg<-3
 n.pars<-4
-N<-nrow(obs.array.simonsen)
-
-
+Nobs<-nrow(simonsen.long)
+N<-length(unique(simonsen.long$ID))
 ###  Running STAN here...
 
 test.standata<-list(N=N,
-                         T=4,
+                    Nobs=Nobs,
                          I=3,
-                         SamplingTimes=obs.array.simonsen,
-                         TestData=ig.values.simonsen)#make this generic!
+                         SamplingTimes=simonsen.long$Time,
+                         ID=simonsen.long$ID.seq,
+                         TestData=as.matrix(simonsen.long[,c("IGG","IGA","IGM")])
+                    )
 niter<-100
 warmup.iter=50
 library(rstan)
