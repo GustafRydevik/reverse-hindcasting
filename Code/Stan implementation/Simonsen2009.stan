@@ -5,20 +5,11 @@ data {
   int <lower=0> ID[Nobs]; // ID numbers
   int <lower=0> I; // Number of different Igg antibodies
   real <lower=0> SamplingTimes[Nobs]; // Times of sampling for each individual
-  matrix[Nobs,I] TestData;      // matrix measured test data
+  matrix<lower=0>[Nobs,I] TestData;      // matrix measured test data
 }
 
 transformed data{
 matrix[Nobs,I] logTestData;
-vector[4] parsVector;
-vector[I] omegaVector;
-matrix[I,I] idOmega;
-matrix[4,4] idPars;
-parsVector<-rep_vector(1,4);
-omegaVector<-rep_vector(1,I);
-idOmega<-diag_matrix(omegaVector);
-idPars<-diag_matrix(parsVector);
-
 for(i in 1:I){
 for(n in 1:Nobs){
   logTestData[n,i]<-log(TestData[n,i]);
@@ -30,8 +21,10 @@ parameters {
 
   matrix[I,4] theta1IgLogmu[N];  // Array of parameters for each individual and igg, on logscale
   matrix[I,4] theta2IgLogmu; // Array of paramater means for each IGG, in logscale
-  cov_matrix[4] igCov[I] ; //Covariance matrix  between parameters for each IGG
-  cov_matrix[3] omega; // Covariance matrix between the three IGG values
+  corr_matrix[4] igCorr[I]; //Covariance matrix  between parameters for each IGG
+  vector<lower=0>[4] igTau[I]; //scale for the correlation  -- See p. 38 in the STAN manual.
+  corr_matrix[I] omegaCorr; // Correlation matrix between the  IGG values
+  vector<lower=0>[I] tau; //Scale for the correlation
 }
 
 transformed parameters {
@@ -59,30 +52,39 @@ transformed parameters {
       }
     estimatedIGG[n,i]<-meanTmp;
     logIGG[n,i]<-log(estimatedIGG[n,i]);
-
     }}
-
 
 }
   
 
 model {
+       matrix[4,4] igCov[I];  
+       matrix[I,I] omega;
+for(i in 1:I){
+       igCov[i]<-diag_matrix(igTau[i])*igCorr[i]*diag_matrix(igTau[i]);
+       igTau[i]~cauchy(0,0.5);  ///prior for the within-parameter scale
+       igCorr[i]~lkj_corr(1.5);   ///prior for the within-parameter correlation
+       }
+
+       omega <- diag_matrix(tau) * omegaCorr * diag_matrix(tau);
+       tau ~ cauchy(0,0.1); ///prior for the within-measurement scale
+       omegaCorr ~ lkj_corr(1);  /////prior for the within-measurement correlation
+      
   for(i in 1:I){
+theta2IgLogmu[i,1]~normal(log(1),log(sqrt(2)));
+theta2IgLogmu[i,2]~normal(log(10),log(sqrt(2)));
+theta2IgLogmu[i,3]~normal(log(0.1),log(sqrt(2)));
+theta2IgLogmu[i,4]~normal(log(1),log(sqrt(2)));
+
     for(n in 1:N){
       to_vector(row(theta1IgLogmu[n],i))~multi_normal(to_vector(row(theta2IgLogmu,i)),igCov[i]);
     }
 
-
-   igCov[i]~wishart(4,idPars);
 }
   
       for(n in 1:Nobs) {
   to_vector(row(logTestData,n))~multi_normal(to_vector(logIGG[n]),omega);
       }
-   omega~wishart(3,idOmega);
-    
-//Needs to add priors and starting values!
-
 }
   
   
