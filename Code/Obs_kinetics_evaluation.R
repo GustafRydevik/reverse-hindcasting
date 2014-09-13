@@ -80,12 +80,12 @@ small.standata<-list(N=length(id.sampled),
                     I=3,
                     SamplingTimes=simonsen.small$Time,
                     ID=simonsen.small$ID.seq,
-                    TestData=as.matrix(simonsen.small[,c("IGG","IGA","IGM")])
+                    TestData=as.matrix(simonsen.small[,c("IGA","IGG","IGM"),drop=FALSE])
 )
 niter<-500
 warmup.iter=250
 rng_seed<-1000:1003
-simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009.stan'), data=test.standata, chains = 0)
+#simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009.stan'), data=test.standata, chains = 0)
 testing<-stan(file.path(script.path,'stan implementation/simonsen2009.stan'),
      data = small.standata,
      seed=rng_seed[1],

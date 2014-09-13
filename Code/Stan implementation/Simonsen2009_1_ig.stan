@@ -3,25 +3,23 @@ data {
   int <lower=0> Nobs; // number of observations
   int <lower=0> N; // number of individuals
   int <lower=0> ID[Nobs]; // ID numbers
-  int <lower=0> I; // Number of different Igg antibodies
   real <lower=0> SamplingTimes[Nobs]; // Times of sampling for each individual
-  matrix<lower=0>[Nobs,I] TestData;      // matrix measured test data
+  real <lower=0>[Nobs] TestData;      // matrix measured test data
 }
 
 transformed data{
-matrix[Nobs,I] logTestData;
-for(i in 1:I){
+real logTestData[Nobs];
 for(n in 1:Nobs){
-  logTestData[n,i]<-log(TestData[n,i]);
+  logTestData[n]<-log(TestData[n]);
 }}
 
 }
 
 parameters {
 
-  matrix[I,4] theta1IgLogmu[N];  // Array of parameters for each individual and igg, on logscale
-  matrix[I,4] theta2IgLogmu; // Array of paramater means for each IGG, in logscale
-  corr_matrix[4] igCorr[I]; //Covariance matrix  between parameters for each IGG
+  matrix[N,4] theta1IgLogmu;  // Array of parameters for each individual and igg, on logscale
+  real theta2IgLogmu[Nobs; // Array of paramater means for each IGG, in logscale
+  corr_matrix[4] igCorr; //Covariance matrix  between parameters for each IGG
   vector<lower=0>[4] igTau[I]; //scale for the correlation  -- See p. 38 in the STAN manual.
   corr_matrix[I] omegaCorr; // Correlation matrix between the  IGG values
   vector<lower=0>[I] tau; //Scale for the correlation
