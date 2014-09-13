@@ -106,7 +106,7 @@ sflist <-
 
 
 simonsen.posterior<-sflist2stanfit(sflist)
-#save(simonsen.posterior,file=file.path(data.path,"fitted stan models/simonsen3Ig_50N_500iter.Rdata"))
+#save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen3Ig_50N_500iter.Rdata"))
 tmp<-extract(simonsen.posterior,pars="theta2IgLogmu")
 tmp2<-extract(simonsen.posterior,pars="theta1IgLogmu")
 igCorr<-extract(simonsen.posterior,pars="igCorr")
