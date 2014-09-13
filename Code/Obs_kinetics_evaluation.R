@@ -112,8 +112,8 @@ tmp2<-extract(simonsen.posterior,pars="theta1IgLogmu")
 igCorr<-extract(simonsen.posterior,pars="igCorr")
 igTau<-extract(simonsen.posterior,pars="igTau")
 
-pars.est<-monitor(extract(testing,pars="theta2IgLogmu", permuted = FALSE, inc_warmup = TRUE))
-individual.pars<-monitor(extract(testing,pars="theta1IgLogmu",permuted=FALSE,inc_warmup=FALSE))
+pars.est<-monitor(extract(simonsen.posterior,pars="theta2IgLogmu", permuted = FALSE, inc_warmup = TRUE))
+individual.pars<-monitor(extract(simonsen.posterior,pars="theta1IgLogmu",permuted=FALSE,inc_warmup=FALSE))
 
 meanpars.matrix<-matrix(pars.est[,"mean"],nrow=3,dimnames=list(c("IGG","IGA","IGM"),c("X.star","D","a","S")))
 individual.matrix<-array(individual.pars[,"mean"],dim=c(ID=50,IG=3,par=4),dimnames=list(1:50,c("IGG","IGA","IGM"),c("X.star","D","a","S")))

@@ -20,11 +20,9 @@ parameters {
   matrix[N,4] theta1IgLogmu;  // Array of parameters for each individual and igg, on logscale
   real theta2IgLogmu[Nobs; // Array of paramater means for each IGG, in logscale
   corr_matrix[4] igCorr; //Covariance matrix  between parameters for each IGG
-  vector<lower=0>[4] igTau[I]; //scale for the correlation  -- See p. 38 in the STAN manual.
-  corr_matrix[I] omegaCorr; // Correlation matrix between the  IGG values
-  vector<lower=0>[I] tau; //Scale for the correlation
+  vector<lower=0> [4] igTau; //variance for ig measurement  -- See p. 38 in the STAN manual.
 }
-
+//continue from here!
 transformed parameters {
   matrix<lower=0>[Nobs,I] estimatedIGG; // An array to store estimated IGG mean values in
   matrix[Nobs,I] logIGG;                 //matrix to store their log values in
