@@ -77,8 +77,8 @@ model {
        omegaCorr ~ lkj_corr(1);  /////prior for the within-measurement correlation
       
   for(i in 1:I){
-  tau[i] ~ cauchy(0,0.05); ///prior for the within-measurement scale
-  igTau[i]~cauchy(0,0.5);  ///prior for the within-parameter scale
+  tau[i] ~ cauchy(0,0.0001); ///prior for the within-measurement scale
+  igTau[i]~cauchy(0,0.1);  ///prior for the within-parameter scale
   igCorr[i]~lkj_corr(1.5);   ///prior for the within-parameter correlation
 
 theta2IgLogmu[i,1]~cauchy(0,0.1); //normal(log(1),log(sqrt(10)));

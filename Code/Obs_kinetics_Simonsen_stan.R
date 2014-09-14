@@ -82,17 +82,18 @@ small.standata<-list(N=length(id.sampled),
                     ID=simonsen.small$ID.seq,
                     TestData=as.matrix(simonsen.small[,c("IGG","IGA","IGM")])
 )
-niter<-500
-warmup.iter=250
+niter<-20000
+warmup.iter=round(niter/2)
 rng_seed<-1000:1003
 simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009.stan'), data=small.standata, chains = 0)
- testing<-stan(file.path(script.path,'stan implementation/simonsen2009.stan'),
-     data = small.standata,
-     seed=rng_seed[1],
-      warmup=warmup.iter,
-      iter = niter,
-      chains = 2,refresh=-1,
-      init = "random")
+#  testing<-stan(file.path(script.path,'stan implementation/simonsen2009.stan'),
+#      data = small.standata,
+#      seed=rng_seed[1],
+#       warmup=warmup.iter,
+#       iter = niter,
+#       chains = 2,refresh=-1,
+#       init = "random")
+t0<-Sys.time()
 sflist <- 
   mclapply(1:4, mc.cores = 4, function(i){
                             stan(fit = simonsen.model,
@@ -103,17 +104,14 @@ sflist <-
                             chains = 1,chain_id=i,refresh=-1,
                             init = "random")})
 
-
-
+t1<-Sys.time()
+print(t1-t0)
 simonsen.posterior<-sflist2stanfit(sflist)
-#save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen3Ig_50N_500iter.Rdata"))
-tmp<-extract(simonsen.posterior,pars="theta2IgLogmu")
-tmp2<-extract(simonsen.posterior,pars="theta1IgLogmu")
-igCorr<-extract(simonsen.posterior,pars="igCorr")
-igTau<-extract(simonsen.posterior,pars="igTau")
+save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen3Ig_50N_500iter.Rdata"))
 
-pars.est<-monitor(extract(simonsen.posterior,pars="theta2IgLogmu", permuted = FALSE, inc_warmup = TRUE))
-individual.pars<-monitor(extract(simonsen.posterior,pars="theta1IgLogmu",permuted=FALSE,inc_warmup=FALSE))
+tail.ndx<-tail(seq(dim(simonsen.posterior)[[1]]),500)
+pars.est<-monitor(extract(simonsen.posterior,pars="theta2IgLogmu", permuted = FALSE, inc_warmup = FALSE)[tail.ndx,,])
+individual.pars<-monitor(extract(simonsen.posterior,pars="theta1IgLogmu",permuted=FALSE,inc_warmup=FALSE)[tail.ndx,,])
 
 meanpars.matrix<-matrix(pars.est[,"mean"],nrow=3,dimnames=list(c("IGG","IGA","IGM"),c("X.star","D","a","S")))
 individual.matrix<-array(individual.pars[,"mean"],dim=c(ID=50,IG=3,par=4),dimnames=list(1:50,c("IGG","IGA","IGM"),c("X.star","D","a","S")))
@@ -131,58 +129,17 @@ mean.pred<-apply(meanpars.matrix,c(1),function(x){
   path.est<-igCurve.est(1:500)
   return(path.est)}
 )
-plot(1:500,individual.pred[,1],type="l",ylim=c(0,5))
-points(simonsen.small$Time,simonsen.small$IGG)
 
 ggplot(data=melt(individual.pred,varnames=c("Time","ID","IGG")),aes(x=Time,y=value,group=ID))+
   facet_wrap(~IGG)+
   geom_line(alpha=0.5,col="red")+
   geom_line(data=data.frame(melt(mean.pred,varnames=c("Time","IGG")),ID=1),size=2,col="red")+
   geom_point(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),variable.name="IGG"),aes(x=Time,y=value))+
-  geom_line(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),variable.name="IGG"),aes(x=Time,y=value,group=ID),alpha=0.5)
+  geom_line(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),variable.name="IGG"),aes(x=Time,y=value,group=ID),alpha=0.5)+ylim(0,5)
+monitor(extract(simonsen.posterior,pars="tau",permute=FALSE))
 
-
-dimnames(pars.est)[[1]]<-paste(rep(c("X.star","D","a","S"),each=3),c("igg","iga","igm"),sep=".")
-igg<-3
-plot(X1~time,type="l",data=data.frame(exp(tmp[[1]])[,igg,],iter=rep(1:4,each=800),time=rep(1:800,4))[1:800,])
-
-lines(X1~time,type="l",data=data.frame(exp(tmp[[1]])[,igg,],iter=rep(1:4,each=800),time=rep(1:800,4))[1:800+800,],col=2)
-lines(X1~time,type="l",data=data.frame(exp(tmp[[1]])[,igg,],iter=rep(1:4,each=800),time=rep(1:800,4))[1:800+1600,],col=3)
-lines(X1~time,type="l",data=data.frame(exp(tmp[[1]])[,igg,],iter=rep(1:4,each=800),time=rep(1:800,4))[1:800+2400,],col=4)
-
-tmp.last100.ndx<-c(sapply(c(8,16,24,32)*100,function(x)(x-100):(x)))
-pars.individual.mean100<-exp(apply(tmp2[[1]][tmp.last100.ndx,,,],c(2:4),sample,1))
-
-
-dimnames(pars.individual.mean100)[[3]]<-c("X.star","D","a","S")
-
-individual.pred<-apply(pars.individual.mean100,c(1,2),function(x){
-  igCurve.est<-do.call("igCurve",as.list(x))
-  path.est<-igCurve.est(1:500)
-  return(path.est)}
-)
-
-
-iggCurve.est<-do.call("igCurve",as.list(pars.mean100[3,]))
-plot(IGG~Time,group=ID,data=simonsen.long,xlim=c(0,500))
-
-
-xvals <- tapply(simonsen.long$Time,simonsen.long$ID,function(x) return(x))
-yvals <- tapply(simonsen.long$IGG,simonsen.long$ID,function(x) return(x))
-
-plot(x=1:max(unlist(xvals)),ylim=(c(0,max(unlist(yvals)))),type="n",xlim=c(0,500))
-# thanks to @BenBolker for refining this next key line
-mapply(lines,xvals,yvals ,col=c("red"),alpha=0.5,pch=1,lty=3,type="o",wed=0.5)
-matplot(1:500,(individual.pred[,,1]),type="l",add=T,lwd=0.7)
-
-points(1:500,iggCurve.est(1:500),type="l",col="red",lwd=2)
-
-
-
-lines(1:500,iggCurve.est(1:500),type="l",col="black",lwd=5)
-
-tmp<-data.frame(extract(simonsen.posterior,pars="lp__"),time=rep(1:500,4),chain=rep(1:4,each=500))
-xyplot(lp__~time,group=chain,type="l",data=tmp,auto.key=T)
+ggplot(melt(extract(simonsen.posterior,pars="lp__",permute=FALSE)),
+       aes(x=iterations,y=value,group=chains))+geom_line()
 
 tmp<-extract(testing,pars="XStar",permuted=FALSE)
 melt(tmp)

@@ -122,12 +122,22 @@ mean.pred<-do.call("igCurve",as.list(exp(mean.pars)))(1:500)
 plot(1:500,individual.pred[,1],type="l",ylim=c(0,5))
 points(simonsen.small$Time,simonsen.small$IGG)
 
+
+##Plotting predicted curves and true curves over time
 ggplot(data=melt(individual.pred,varnames=c("Time","ID")),aes(x=Time,y=value,group=ID))+
   geom_line(alpha=0.5,col="red")+
   geom_line(data=data.frame(value=mean.pred,Time=1:500,ID=1),size=2,col="darkred")+
   geom_point(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),measure.vars="IGM"),aes(x=Time,y=value))+
   geom_line(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),measure.vars="IGM"),aes(x=Time,y=value,group=ID),alpha=0.5)
 
+
+
+#plotting predicted vs true values.
+ggplot(data=merge(simonsen.small,melt(individual.pred,varnames=c("Time","ID")),
+             by.x=c("Time","ID.seq"),by.y=c("Time","ID")
+             ),aes(x=log(value),y=log(IGM)))+
+  geom_point()+
+  geom_line(data=data.frame(value=range(individual.pred),IGM=range(individual.pred)))
 
 dimnames(pars.est)[[1]]<-paste(rep(c("X.star","D","a","S"),each=3),c("igg","iga","igm"),sep=".")
 igg<-3
