@@ -35,6 +35,10 @@ transformed parameters {
   real <lower=0> a;
   real <lower=0> D;
   real <lower=0>  meanTmp;
+  matrix[4,4] igCov[I];  
+  matrix[I,I] omega;
+
+
   for( i in 1:I){  /// Calculating the estimated IGG values acc. to the used model 
     for(n in 1:Nobs){
     int index;
@@ -54,27 +58,33 @@ transformed parameters {
     logIGG[n,i]<-log(estimatedIGG[n,i]);
     }}
 
+
+  for(i in 1:I){
+       igCov[i]<-diag_matrix(igTau[i])*igCorr[i]*diag_matrix(igTau[i]);
+    }
+
+       omega <- diag_matrix(tau) * omegaCorr * diag_matrix(tau);
+
+
 }
   
 
 model {
-       matrix[4,4] igCov[I];  
-       matrix[I,I] omega;
-for(i in 1:I){
-       igCov[i]<-diag_matrix(igTau[i])*igCorr[i]*diag_matrix(igTau[i]);
-       igTau[i]~cauchy(0,0.5);  ///prior for the within-parameter scale
-       igCorr[i]~lkj_corr(1.5);   ///prior for the within-parameter correlation
-       }
 
-       omega <- diag_matrix(tau) * omegaCorr * diag_matrix(tau);
-       tau ~ cauchy(0,0.1); ///prior for the within-measurement scale
+
+
+
        omegaCorr ~ lkj_corr(1);  /////prior for the within-measurement correlation
       
   for(i in 1:I){
-theta2IgLogmu[i,1]~normal(log(1),log(sqrt(10)));
-theta2IgLogmu[i,2]~normal(log(10),log(sqrt(10)));
-theta2IgLogmu[i,3]~normal(log(0.1),log(sqrt(10)));
-theta2IgLogmu[i,4]~normal(log(1),log(sqrt(10)));
+  tau[i] ~ cauchy(0,0.05); ///prior for the within-measurement scale
+  igTau[i]~cauchy(0,0.5);  ///prior for the within-parameter scale
+  igCorr[i]~lkj_corr(1.5);   ///prior for the within-parameter correlation
+
+theta2IgLogmu[i,1]~cauchy(0,0.1); //normal(log(1),log(sqrt(10)));
+theta2IgLogmu[i,2]~cauchy(0,0.1); //normal(log(10),log(sqrt(10)));
+theta2IgLogmu[i,3]~cauchy(0,0.1); //normal(log(0.1),log(sqrt(10)));
+theta2IgLogmu[i,4]~cauchy(0,0.1);//normal(log(1),log(sqrt(10)));
 
     for(n in 1:N){
       to_vector(row(theta1IgLogmu[n],i))~multi_normal(to_vector(row(theta2IgLogmu,i)),igCov[i]);

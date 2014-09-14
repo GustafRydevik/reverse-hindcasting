@@ -65,32 +65,26 @@ my.inits<-list(
 
 
 
-
-# simonsen.results.stan<-stan(file = file.path(script.path,'stan implementation/simonsen2009.stan'),
-#                             data = test.standata,
-#                             verbose = TRUE,
-#                             chains = 0,
-#                             init = "random")
 set.seed(1000)
 id.sampled<-sample(unique(simonsen.long$ID),50)
 simonsen.small<-subset(simonsen.long,ID%in%id.sampled)
 simonsen.small$ID.seq<-seq_along(id.sampled)[match(simonsen.small$ID,id.sampled)]
 small.standata<-list(N=length(id.sampled),
                     Nobs=nrow(simonsen.small),
-                    I=3,
+                    I=1,
                     SamplingTimes=simonsen.small$Time,
                     ID=simonsen.small$ID.seq,
-                    TestData=as.matrix(simonsen.small[,c("IGG","IGA","IGM")])
+                    TestData=c(simonsen.small[,c("IGM")])
 )
 niter<-500
 warmup.iter=250
 rng_seed<-1000:1003
-simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009.stan'), data=small.standata, chains = 0)
- testing<-stan(file.path(script.path,'stan implementation/simonsen2009.stan'),
+simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009_onetest.stan'), data=small.standata, chains = 0)
+testing<-stan(fit=simonsen.model,
      data = small.standata,
      seed=rng_seed[1],
-      warmup=warmup.iter,
-      iter = niter,
+      warmup=25,
+      iter = 50,
       chains = 2,refresh=-1,
       init = "random")
 sflist <- 
@@ -107,39 +101,32 @@ sflist <-
 
 simonsen.posterior<-sflist2stanfit(sflist)
 #save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen3Ig_50N_500iter.Rdata"))
-tmp<-extract(simonsen.posterior,pars="theta2IgLogmu")
-tmp2<-extract(simonsen.posterior,pars="theta1IgLogmu")
-igCorr<-extract(simonsen.posterior,pars="igCorr")
-igTau<-extract(simonsen.posterior,pars="igTau")
+
 
 pars.est<-monitor(extract(simonsen.posterior,pars="theta2IgLogmu", permuted = FALSE, inc_warmup = TRUE))
 individual.pars<-monitor(extract(simonsen.posterior,pars="theta1IgLogmu",permuted=FALSE,inc_warmup=FALSE))
 
-meanpars.matrix<-matrix(pars.est[,"mean"],nrow=3,dimnames=list(c("IGG","IGA","IGM"),c("X.star","D","a","S")))
-individual.matrix<-array(individual.pars[,"mean"],dim=c(ID=50,IG=3,par=4),dimnames=list(1:50,c("IGG","IGA","IGM"),c("X.star","D","a","S")))
+mean.pars<-c(pars.est[,"mean"])
+names(mean.pars)<-c("X.star","D","a","S")
+individual.matrix<-matrix(individual.pars[,"mean"],nrow=50,dimnames=list(1:50,c("X.star","D","a","S")))
 
 
-individual.pred<-apply(individual.matrix,c(1,2),function(x){
+individual.pred<-apply(individual.matrix,1,function(x){
   x<-exp(x)
   igCurve.est<-do.call("igCurve",as.list(x))
   path.est<-igCurve.est(1:500)
   return(path.est)}
 )
-mean.pred<-apply(meanpars.matrix,c(1),function(x){
-  x<-exp(x)
-  igCurve.est<-do.call("igCurve",as.list(x))
-  path.est<-igCurve.est(1:500)
-  return(path.est)}
-)
+mean.pred<-do.call("igCurve",as.list(exp(mean.pars)))(1:500)
+
 plot(1:500,individual.pred[,1],type="l",ylim=c(0,5))
 points(simonsen.small$Time,simonsen.small$IGG)
 
-ggplot(data=melt(individual.pred,varnames=c("Time","ID","IGG")),aes(x=Time,y=value,group=ID))+
-  facet_wrap(~IGG)+
+ggplot(data=melt(individual.pred,varnames=c("Time","ID")),aes(x=Time,y=value,group=ID))+
   geom_line(alpha=0.5,col="red")+
-  geom_line(data=data.frame(melt(mean.pred,varnames=c("Time","IGG")),ID=1),size=2,col="red")+
-  geom_point(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),variable.name="IGG"),aes(x=Time,y=value))+
-  geom_line(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),variable.name="IGG"),aes(x=Time,y=value,group=ID),alpha=0.5)
+  geom_line(data=data.frame(value=mean.pred,Time=1:500,ID=1),size=2,col="darkred")+
+  geom_point(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),measure.vars="IGM"),aes(x=Time,y=value))+
+  geom_line(data=melt(simonsen.small,id.vars=c("ID","ID.seq","Time"),measure.vars="IGM"),aes(x=Time,y=value,group=ID),alpha=0.5)
 
 
 dimnames(pars.est)[[1]]<-paste(rep(c("X.star","D","a","S"),each=3),c("igg","iga","igm"),sep=".")
