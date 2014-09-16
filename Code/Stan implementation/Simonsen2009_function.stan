@@ -5,13 +5,13 @@ real tTrunc;
 real smooth;
 real tscaled;
 real pi;
-smooth<-1;
+smooth<-5;
 pi<-3.14159;
-tscaled<-(t-D+2.0)/smooth;
+
+tscaled<-(t-D+2)/smooth;
 //shifting d by two above to avoid overrun
 
-tTrunc<-(0.5-atan(tscaled)/pi)*t+(D)*(atan(tscaled)/pi+0.5)-1/pi;
-
+tTrunc<-(1-atan(tscaled)/pi+0.5)*t+(D-2)*(atan(tscaled)/pi+0.5);
 return tTrunc;
 }
 
@@ -19,10 +19,7 @@ return tTrunc;
 
 real igKinetic(real t, real XStar, real S,real a, real D) {
 real igValue;
-real tTrunc;
-tTrunc<-smoothCeiling(t,D);
-
-          igValue<-(XStar+(S+a*S*(D-tTrunc)-S*(1+a*D)*exp(-a*t))/(D*square(a)));
+          igValue<-(XStar+(S+a*S*(D-smoothCeiling(t,D))-S*(1+a*D)*exp(-a*t))/(D*square(a)));
 return igValue;
 }
 }
@@ -73,13 +70,7 @@ transformed parameters {
     for(n in 1:Nobs){
     int index;
     index <- ID[n]; 
-   XStar<-exp(theta1IgLogmu_t[I,ID[n],1]);
-      D<-exp(theta1IgLogmu_t[I,ID[n],2]);
-      a<-exp(theta1IgLogmu_t[I,ID[n],3]);
-      S<-exp(theta1IgLogmu_t[I,ID[n],4]);
-
      meanTmp<-igKinetic(SamplingTimes[n], XStar,S,a,D);
-    estimatedIGG[n,i]<-meanTmp;
     logIGG[n,i]<-log(estimatedIGG[n,i]);
     }}
 

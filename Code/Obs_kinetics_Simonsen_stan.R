@@ -85,14 +85,14 @@ small.standata<-list(N=length(id.sampled),
 niter<-6000
 warmup.iter=round(niter/2)
 rng_seed<-1000:1003
-simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009.stan'), data=small.standata, chains = 0)
-#  testing<-stan(file.path(script.path,'stan implementation/simonsen2009.stan'),
-#      data = small.standata,
-#      seed=rng_seed[1],
-#       warmup=warmup.iter,
-#       iter = niter,
-#       chains = 2,refresh=-1,
-#       init = "random")
+simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009_function_test.stan'), data=small.standata, chains = 0)
+ testing<-stan(fit=simonsen.model,
+     data = small.standata,
+     seed=rng_seed[1],
+      warmup=50,
+      iter = 100,
+      chains = 2,refresh=-1,
+      init = "random")
 t0<-Sys.time()
 sflist <- 
   mclapply(1:4, mc.cores = 4, function(i){
