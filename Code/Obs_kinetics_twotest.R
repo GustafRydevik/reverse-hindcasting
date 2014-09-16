@@ -87,12 +87,15 @@ simonsen.abna<-SimonsenDataGen(50,6,par.means=theta,par.covariance = igCov,measu
 #ggplot(data=tmp,aes(x=Time,y=IG,group=ID))+geom_line()
 N<-50
 Nobs<-6*50
-simonsen.pseudo<-list(N=N,Nobs=Nobs,SamplingTimes=simonsen.abna$Time,
+simonsen.pseudo.2t<-list(N=N,Nobs=Nobs,SamplingTimes=simonsen.abna$Time,
                             ID=simonsen.abna$ID,
                             TestData=as.matrix(simonsen.abna[,c("IG","na.obs")])
                           )
-
-dput(simonsen.pseudo,file=file.path(data.path,"SimonsenPseudoData.txt"))
+simonsen.pseudo.1t<-list(N=N,Nobs=Nobs,SamplingTimes=simonsen.abna$Time,
+                         ID=simonsen.abna$ID,
+                         TestData=c(simonsen.abna[,c("IG")])
+)
+dput(simonsen.pseudo.2t,file=file.path(data.path,"SimonsenPseudoData.txt"))
 library(rstan)
 library(parallel)
 my.inits<-list(
@@ -107,31 +110,54 @@ my.inits<-list(
 
 
 
-niter<-10000
+niter<-500
 warmup.iter=round(niter/2)
 rng_seed<-1000:1003
-simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009_na_ab.stan'), data=simonsen.pseudo, chains = 0)
-testing<-stan(fit=simonsen.model,
-     data = simonsen.pseudo,
-     seed=rng_seed[1],
-      warmup=25,
-      iter = 50,
-      chains = 2,refresh=-1,
-      init = "random")
+simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009_na_ab.stan'), data=simonsen.pseudo.2t, chains = 0)
+# 
+# testing<-stan(fit=simonsen.model,
+#      data = simonsen.pseudo,
+#      seed=rng_seed[1],
+#       warmup=25,
+#       iter = 50,
+#       chains = 2,refresh=-1,
+#       init = "random")
+
+
+t0<-Sys.time()
 sflist <- 
   mclapply(1:4, mc.cores = 4, function(i){
                             stan(fit = simonsen.model,
-                            data = simonsen.pseudo,
+                            data = simonsen.pseudo.2t,
                             seed=rng_seed[i],
                              warmup=warmup.iter,
                             iter = niter,
                             chains = 1,chain_id=i,refresh=-1,
                             init = "random")})
+t1<-Sys.time()
+t1-t0
 
 
+simonsen.posterior.2t<-sflist2stanfit(sflist)
+save(simonsen.posterior.t2,file=file.path(data.path,"fitted-stan-models/simonsen_igna_50N_10000iter.Rdata"))
+rm(simonsen.posterior.t2)
+simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009_onetest.stan'), data=simonsen.pseudo.1t, chains = 0)
+t00<-Sys.time()
+sflist <- 
+  mclapply(1:3, mc.cores = 3, function(i){
+    stan(fit = simonsen.model,
+         data = simonsen.pseudo.1t,
+         seed=rng_seed[i],
+         warmup=warmup.iter,
+         iter = niter,
+         chains = 1,chain_id=i,refresh=-1,
+         init = "random")})
+t10<-Sys.time()
+t10-t00
 
-simonsen.posterior<-sflist2stanfit(sflist)
-save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen_igna_50N_2000iter.Rdata"))
+
+simonsen.posterior.1t<-sflist2stanfit(sflist)
+save(simonsen.posterior.1t,file=file.path(data.path,"fitted-stan-models/simonsen_ig_50N_10000iter.Rdata"))
 
 
 tail.ndx<-tail(seq(dim(simonsen.posterior)[[1]]),300)

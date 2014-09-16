@@ -82,7 +82,7 @@ small.standata<-list(N=length(id.sampled),
                     ID=simonsen.small$ID.seq,
                     TestData=as.matrix(simonsen.small[,c("IGG","IGA","IGM")])
 )
-niter<-20000
+niter<-6000
 warmup.iter=round(niter/2)
 rng_seed<-1000:1003
 simonsen.model <- stan(file.path(script.path,'stan implementation/simonsen2009.stan'), data=small.standata, chains = 0)
@@ -107,7 +107,7 @@ sflist <-
 t1<-Sys.time()
 print(t1-t0)
 simonsen.posterior<-sflist2stanfit(sflist)
-save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen3Ig_50N_500iter.Rdata"))
+save(simonsen.posterior,file=file.path(data.path,"fitted-stan-models/simonsen3Ig_50N_20000iter.Rdata"))
 
 tail.ndx<-tail(seq(dim(simonsen.posterior)[[1]]),500)
 pars.est<-monitor(extract(simonsen.posterior,pars="theta2IgLogmu", permuted = FALSE, inc_warmup = FALSE)[tail.ndx,,])
@@ -139,38 +139,5 @@ ggplot(data=melt(individual.pred,varnames=c("Time","ID","IGG")),aes(x=Time,y=val
 monitor(extract(simonsen.posterior,pars="tau",permute=FALSE))
 
 ggplot(melt(extract(simonsen.posterior,pars="lp__",permute=FALSE)),
-       aes(x=iterations,y=value,group=chains))+geom_line()
+       aes(x=iterations,y=value,group=chains,color=chains))+geom_line()
 
-tmp<-extract(testing,pars="XStar",permuted=FALSE)
-melt(tmp)
-xyplot(value~iterations,group=chains,type="l",data=melt(tmp),auto.key=T)
-
-lines(X1~time,type="l",data=tmp,col=2)
-lines(X1~time,type="l",data=tmp,col=3)
-lines(X1~time,type="l",data=data.frame(exp(tmp[[1]])[,igg,],iter=rep(1:4,each=500),time=rep(1:500,4))[1:500+1500,],col=4)
-
-#                               list(list(theta1IgLogmu=log(aperm(array(rep(c(X.star=0.15,D=15,a=0.05,S=0.1, 
-#                                                         X.star=0.3,D=15,a=0.1,S=0.2,
-#                                                         X.star=0.45,D=15,a=0.15,S=0.3),N),dim=c(4,3,N)),c(3,2,1))),
-#                                              theta2IgLogmu=log(matrix(c(X.star=0.15,D=15,a=0.05,S=0.1, 
-#                                                                        X.star=0.3,D=15,a=0.1,S=0.2,
-#                                                                        X.star=0.45,D=15,a=0.15,S=0.3),nrow=3,byrow=T)),
-#                                              igCov=aperm(array(rep(diag(4),3),dim=c(4,4,3)),c(3,2,1)),
-#                                              omega=diag(3))))
-                          
-
-
-
-temp<-metropolis(jump.fun=jump.mvnorm,
-                  init.fun=
-                    SimonsenInit,
-                    #ResumeInit(temp$Posterior),
-                  LikelihoodFun=SimonsenLLtest,
-                  npars=NULL,
-                  nreps=10000,
-                  jump.cov=
-                    #temp$jumping.kernel[1,20,,],
-                  NULL,
-                  ValidateFun=TestingCovariance,
-                  Adapt=TRUE,greedy=T#,store.ndx=c(seq(1,50000-1000,length.out=10000),49001:50000)
-)
